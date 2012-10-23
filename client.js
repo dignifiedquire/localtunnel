@@ -3,44 +3,33 @@ var net = require('net');
 var url = require('url');
 var request = require('request');
 
-var argv = require('optimist')
-    .usage('Usage: $0 --port [num]')
-    .demand(['port'])
-    .options('host', {
-        default: 'http://localtunnel.me',
-        describe: 'upstream server providing forwarding'
-    })
-    .options('subdomain', {
-        describe: 'request this subdomain'
-    })
-    .describe('port', 'internal http server port')
-    .argv;
 
-// local port
-var local_port = argv.port;
 
-// optionally override the upstream server
-var upstream = url.parse(argv.host);
+var start = function(local_port, host, subdomain, callback){
 
-// query options
-var opt = {
+  // optionally override the upstream server
+  var upstream = url.parse(host);
+
+  // query options
+  var opt = {
     host: upstream.hostname,
     port: upstream.port || 80,
     path: '/',
     json: true
+  };
+
+  var base_uri = 'http://' + opt.host + ':' + opt.port + opt.path;
+  var prev_id = subdomain || '';
+
+  connect_proxy(opt, base_uri, prev_id, local_port, host, callback);
 };
 
-var base_uri = 'http://' + opt.host + ':' + opt.port + opt.path;
-
-var prev_id = argv.subdomain || '';
-
-(function connect_proxy() {
+var connect_proxy = function (opt, base_uri, prev_id, local_port, host, callback) {
     opt.uri = base_uri + ((prev_id) ? prev_id : '?new');
 
     request(opt, function(err, res, body) {
         if (err) {
-            console.error('tunnel server not available: %s, retry 1s', err.message);
-
+            callback(err);
             // retry interval for id request
             return setTimeout(function() {
                 connect_proxy();
@@ -54,8 +43,7 @@ var prev_id = argv.subdomain || '';
 
         // store the id so we can try to get the same one
         prev_id = body.id;
-
-        console.log('your url is: %s', body.url);
+        callback(null, body.url);
 
         var count = 0;
 
@@ -71,9 +59,9 @@ var prev_id = argv.subdomain || '';
             });
         }
     });
-})();
+};
 
-function duplex(port, host, local_port, local_host) {
+var duplex = function(port, host, local_port, local_host) {
 
     // connect to remote tcp server
     var upstream = net.createConnection(port, host);
@@ -117,3 +105,5 @@ function duplex(port, host, local_port, local_host) {
 }
 
 
+// Publish
+exports.start = start;

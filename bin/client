@@ -1,4 +1,27 @@
 #!/usr/bin/env node
-require(__dirname + '/../client');
+var client = require(__dirname + '/../client');
+
+var argv = require('optimist')
+    .usage('Usage: $0 --port [num]')
+    .demand(['port'])
+    .options('host', {
+        default: 'http://localtunnel.me',
+        describe: 'upstream server providing forwarding'
+    })
+    .options('subdomain', {
+        describe: 'request this subdomain'
+    })
+    .describe('port', 'internal http server port')
+    .argv;
+
+
+
+client.start(argv.port, argv.host, argv.subdomain, function(error, url){
+  if (error) {
+    console.error('tunnel server not available: %s, retry 1s', err.message);
+  }
+  console.log('your url is: %s', url);
+});
+
 
 // vim: ft=javascript

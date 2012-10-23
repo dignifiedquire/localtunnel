@@ -19,5 +19,6 @@
   },
   "bin": {
     "lt": "./bin/client"
-  }
+  },
+  "main": "./client"
 }
